@@ -35,11 +35,11 @@ class Grid():
         self.grid = self.__generate_grid(size)
         self.length = size #square matrix, width is same
 
-    def print_cell_type(self,size):
+    def print_vals(self,size):
         for row in range(size):
             rowStr = ""
             for col in range(size):
-                rowStr += "[ "+ str(self.grid[row][col].cell_type) + " ]"
+                rowStr += "[ "+ "{0:.2f}".format(self.grid[row][col].val) + " ]"
             print(rowStr)
 
     def __generate_grid(self,size):
@@ -59,6 +59,29 @@ class Grid():
                         grid[i].append(GridCell(i,j,0))
         return grid
 
+    def adjacent_values(self,r,c):
+        vals = []
+        #north
+        if r !=  0:
+            vals.append(self.grid[r-1][c].val)
+        else:
+            vals.append(0) # cell is next to edgesouth
+        if r != 4:
+            vals.append(self.grid[r+1][c].val)
+        else:
+            vals.append(0) # cell is next to edge
+        #east
+        if c != 4:
+            vals.append(self.grid[r][c+1].val)
+        else:
+            vals.append(0) # cell is next to edge
+        #west
+        if c != 0:
+            vals.append(self.grid[r][c-1].val)
+        else:
+            vals.append(0) # cell is next to edge
+        return vals
+
 class Agent():
     def __init__(self,size):
         self.row = rnd.randrange(0,size-1)
@@ -77,6 +100,9 @@ class Agent():
         #generate reward
         current_cell = g.grid[self.row][self.col]
         reward, self.row, self.col = current_cell.get_next_cell(action)
+        
+        # state calculation
+        current_cell.update_state(reward, g)
         self.total_rewards += reward # / count? do I need to track number of steps
 
 class GridCell():
@@ -84,8 +110,24 @@ class GridCell():
         #state-value? initialized with rnd gauss?
         self.row = r
         self.col = c
-        self.cell_type = type # 0 - normal, 1 - A, 2 -B
+        self.cell_type = type # 0 - normal, 1 - A, 2 - B
+        self.val = 0
     
+    # given the reward after an action is taken, and the values of the adjacent cells
+    # this function calculates the new value of the previous cell
+    def update_state(self, reward, grid):
+
+        # TODO add separate cases for cells a and b
+
+        adj = grid.adjacent_values(self.row, self.col)
+        avg = 0
+        for val in adj:
+            avg += val #what if cell is against an edge? then count of states is not 4
+        avg = avg / 4
+        
+        #return avg value of neighbors + reward gained then apply discount
+        self.val = (.9 * avg) + reward 
+         
     #returns: reward, row, col
     #this functions determines a reward for a step, as well as finding the coordinates for the next cell
     def get_next_cell(self, action):
@@ -118,7 +160,7 @@ class GridCell():
                     #location remains unchanged
                 else:
                     reward = 0
-                    new_row = self.row + 1
+                    new_row = self.row - 1
             case "e":
                 if self.col == 4:
                     reward = -1
@@ -140,74 +182,24 @@ class GridCell():
                     #location remains unchanged
                 else:
                     reward = 0
-                    new_col = self.col + 1
+                    new_col = self.col - 1
         
         return reward, new_row, new_col
 
 if __name__ == '__main__':
-    
+    n_steps = 10000
+
     #grid generation
     grid = Grid(N)
-    grid.print_cell_type(N)
-
+    grid.print_vals(N) # initial vals
+    
     #agent generation
     agent = Agent(grid.length)
-    print(str(agent.get_location()) + " " + str(agent.total_rewards))
-    agent.step(grid)
-    print(str(agent.get_location()) + " " + str(agent.total_rewards))
+    print(str(agent.total_rewards)) # initial rewards
+    for i in range(n_steps):
+        agent.step(grid)
 
-    #test cases for special cells A and B
-    #A = (0,1) - reward 10
-    #B = (0,3) - reward 5
-    print("\nTest cases for special cells A and B")
-    agentA = Agent(grid.length)
-    agentB = Agent(grid.length)
-    agentA.row = 0
-    agentA.col = 1
-    agentB.row = 0
-    agentB.col = 3
-    agentA.step(grid)
-    agentB.step(grid)
-    print(str(agentA.get_location()) + " " + str(agentA.total_rewards))
-    print(str(agentB.get_location()) + " " + str(agentB.total_rewards))
-
-    #Test cases for edge of grid
-    print("\nTest cases for grid edges")
-    edge_agent = Agent(grid.length)
-    
-    i = 0
-    # north edge
-    while i < 5:
-        edge_agent.row = 0
-        edge_agent.col = i
-        edge_agent.actions = ['n']
-        edge_agent.step(grid)
-        print(str(edge_agent.get_location()) + " " + str(edge_agent.total_rewards))
-        i += 1
-    i = 0
-    # east edge
-    while i < 5:
-        edge_agent.row = i
-        edge_agent.col = 4
-        edge_agent.actions = ['e']
-        edge_agent.step(grid)
-        print(str(edge_agent.get_location()) + " " + str(edge_agent.total_rewards))
-        i += 1
-    i = 0
-    # south edge
-    while i < 5:
-        edge_agent.row = 4
-        edge_agent.col = i
-        edge_agent.actions = ['s']
-        edge_agent.step(grid)
-        print(str(edge_agent.get_location()) + " " + str(edge_agent.total_rewards))
-        i += 1
-    i = 0
-    # west edge
-    while i < 5:
-        edge_agent.row = i
-        edge_agent.col = 0
-        edge_agent.actions = ['w']
-        edge_agent.step(grid)
-        print(str(edge_agent.get_location()) + " " + str(edge_agent.total_rewards))
-        i += 1
+    #results
+    print("Results after " + str(n_steps))
+    grid.print_vals(N)
+    print("Total Rewards = " + str(agent.total_rewards))
