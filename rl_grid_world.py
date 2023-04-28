@@ -94,7 +94,7 @@ class Agent():
 
     def step(self, g):
         #choose action
-#        act_index = rnd.randrange(0, 4)
+        #act_index = rnd.randrange(0, 4)
         action = rnd.choice(self.actions)
         
         #generate reward
@@ -116,14 +116,18 @@ class GridCell():
     # given the reward after an action is taken, and the values of the adjacent cells
     # this function calculates the new value of the previous cell
     def update_state(self, reward, grid):
+        if self.cell_type == 1:
+            self.val = grid[4][1].val * .9 + reward # only one possible next state 
 
-        # TODO add separate cases for cells a and b
-
-        adj = grid.adjacent_values(self.row, self.col)
-        avg = 0
-        for val in adj:
-            avg += val #what if cell is against an edge? then count of states is not 4
-        avg = avg / 4
+        elif self.cell_type == 2:
+            self.val = grid[2][3].val * .9 + reward # only one possible next state
+        # average all possible next states -> apply 
+        else:
+            adj = grid.adjacent_values(self.row, self.col)
+            avg = 0
+            for val in adj:
+                avg += val #what if cell is against an edge? then count of states is not 4
+            avg = avg / 4
         
         #return avg value of neighbors + reward gained then apply discount
         self.val = (.9 * avg) + reward 
