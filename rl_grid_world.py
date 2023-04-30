@@ -1,6 +1,6 @@
 '''
 template: Richard Weiss, April 2023
-grid world simulation 
+g.grid world simulation 
 you can do this in O-O, functional, or imperative style
 I used O-O here
 
@@ -9,7 +9,7 @@ What are the instance methods?
 you want to choose an action, get a reward and determine the next state
 in the first version, the policy is random, ie the action is chosen randomly from the 4
 steps:
-initialize the grid
+initialize the g.grid
 initialize the position of the agent
 loop a number of steps
 choose an action and compute the result
@@ -25,9 +25,9 @@ match repuires Python 3.10
 
 import random as rnd
 
-N = 5   #grid size
+N = 5   #g.grid size
 class Grid():
-    #grid = []
+    #g.grid = []
     #length: int
     #width: int
 
@@ -44,7 +44,7 @@ class Grid():
 
     def __generate_grid(self,size):
         grid = []
-        #special grid cells a and b
+        #special g.grid cells a and b
         #A = (0,2)
         #B = (0,4)
         for i in range(size):
@@ -59,27 +59,27 @@ class Grid():
                         grid[i].append(GridCell(i,j,0))
         return grid
 
-    def adjacent_values(self,r,c):
+    def next_states(self,r,c):
         vals = []
         #north
         if r !=  0:
             vals.append(self.grid[r-1][c].val)
         else:
-            vals.append(0) # cell is next to edgesouth
+            vals.append(self.grid[r][c].val) # cell is next to edgesouth
         if r != 4:
             vals.append(self.grid[r+1][c].val)
         else:
-            vals.append(0) # cell is next to edge
+            vals.append(self.grid[r][c].val) # cell is next to edge
         #east
         if c != 4:
             vals.append(self.grid[r][c+1].val)
         else:
-            vals.append(0) # cell is next to edge
+            vals.append(self.grid[r][c].val) # cell is next to edge
         #west
         if c != 0:
             vals.append(self.grid[r][c-1].val)
         else:
-            vals.append(0) # cell is next to edge
+            vals.append(self.grid[r][c].val) # cell is next to edge
         return vals
 
 class Agent():
@@ -113,24 +113,25 @@ class GridCell():
         self.cell_type = type # 0 - normal, 1 - A, 2 - B
         self.val = 0
     
-    # given the reward after an action is taken, and the values of the adjacent cells
-    # this function calculates the new value of the previous cell
-    def update_state(self, reward, grid):
+    # given the reward after an action is taken, and the values of all possible following states
+    # this function calculates the new value of a cell
+    def update_state(self, reward, g):
         if self.cell_type == 1:
-            self.val = grid[4][1].val * .9 + reward # only one possible next state 
-
+            self.val = g.grid[4][1].val * .9 + reward # only one possible next state 
+            return
         elif self.cell_type == 2:
-            self.val = grid[2][3].val * .9 + reward # only one possible next state
-        # average all possible next states -> apply 
-        else:
-            adj = grid.adjacent_values(self.row, self.col)
-            avg = 0
-            for val in adj:
-                avg += val #what if cell is against an edge? then count of states is not 4
-            avg = avg / 4
+            self.val = g.grid[2][3].val * .9 + reward # only one possible next state
+            return
+                
+        #average all possible next states
+        possible_next_states = g.next_states(self.row, self.col)
+        avg = 0
+        for val in possible_next_states:
+            avg += (val * .9) #what if cell is against an edge? then count of states is not 4
         
+        avg = avg / len(possible_next_states)
         #return avg value of neighbors + reward gained then apply discount
-        self.val = (.9 * avg) + reward 
+        self.val = avg + reward 
          
     #returns: reward, row, col
     #this functions determines a reward for a step, as well as finding the coordinates for the next cell
@@ -193,13 +194,13 @@ class GridCell():
 if __name__ == '__main__':
     n_steps = 10000
 
-    #grid generation
+    #g.grid generation
     grid = Grid(N)
-    grid.print_vals(N) # initial vals
+    grid.print_vals(N)
     
     #agent generation
     agent = Agent(grid.length)
-    print(str(agent.total_rewards)) # initial rewards
+    print(str(agent.total_rewards))
     for i in range(n_steps):
         agent.step(grid)
 
