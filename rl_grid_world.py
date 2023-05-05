@@ -65,7 +65,8 @@ class Grid():
         if r !=  0:
             vals.append(self.grid[r-1][c].val)
         else:
-            vals.append(self.grid[r][c].val) # cell is next to edgesouth
+            vals.append(self.grid[r][c].val) # cell is next to edge
+        #south
         if r != 4:
             vals.append(self.grid[r+1][c].val)
         else:
@@ -118,20 +119,21 @@ class GridCell():
     def update_state(self, reward, g):
         if self.cell_type == 1:
             self.val = g.grid[4][1].val * .9 + reward # only one possible next state 
-            return
+
         elif self.cell_type == 2:
             self.val = g.grid[2][3].val * .9 + reward # only one possible next state
-            return
-                
-        #average all possible next states
-        possible_next_states = g.next_states(self.row, self.col)
-        avg = 0
-        for val in possible_next_states:
-            avg += (val * .9) #what if cell is against an edge? then count of states is not 4
-        
-        avg = avg / len(possible_next_states)
-        #return avg value of neighbors + reward gained then apply discount
-        self.val = avg + reward 
+
+
+        else:
+            #average all possible next states
+            possible_next_states = g.next_states(self.row, self.col)
+            avg = 0
+            for val in possible_next_states:
+                avg += (val * .9)
+
+            avg = avg / len(possible_next_states)
+            #return avg value of neighbors + reward gained then apply discount
+            self.val = avg + reward
          
     #returns: reward, row, col
     #this functions determines a reward for a step, as well as finding the coordinates for the next cell
@@ -192,7 +194,7 @@ class GridCell():
         return reward, new_row, new_col
 
 if __name__ == '__main__':
-    n_steps = 10000
+    n_steps = 100000
 
     #g.grid generation
     grid = Grid(N)
@@ -208,3 +210,12 @@ if __name__ == '__main__':
     print("Results after " + str(n_steps))
     grid.print_vals(N)
     print("Total Rewards = " + str(agent.total_rewards))
+
+    #test value function
+    agent.row = 0
+    agent.col = 0
+    startcell  = grid.grid[3][0]
+    
+    print(grid.grid[0][0].val)
+    print(grid.grid[0][1].val)
+    startcell.update_state(-1, grid)
