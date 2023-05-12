@@ -20,17 +20,13 @@ match repuires Python 3.10
 '''
 # Winston Shine
 # Reinforcement Learning
-# Lab 3
-# 4/20/2023
+# Lab 3 & 4
+# 5/11/2023
 
 import random as rnd
 
-N = 5   #g.grid size
+N = 5   # grid size
 class Grid():
-    #g.grid = []
-    #length: int
-    #width: int
-
     def __init__(self, size):
         self.grid = self.__generate_grid(size)
         self.length = size #square matrix, width is same
@@ -61,27 +57,36 @@ class Grid():
 
     def next_states(self,r,c):
         vals = []
+        rewards = []
         #north
         if r !=  0:
             vals.append(self.grid[r-1][c].val)
+            rewards.append(0)
         else:
             vals.append(self.grid[r][c].val) # cell is next to edge
+            rewards.append(-1)
         #south
         if r != 4:
             vals.append(self.grid[r+1][c].val)
+            rewards.append(0)
         else:
             vals.append(self.grid[r][c].val) # cell is next to edge
+            rewards.append(-1)
         #east
         if c != 4:
             vals.append(self.grid[r][c+1].val)
+            rewards.append(0)
         else:
             vals.append(self.grid[r][c].val) # cell is next to edge
+            rewards.append(-1)
         #west
         if c != 0:
             vals.append(self.grid[r][c-1].val)
+            rewards.append(0)
         else:
             vals.append(self.grid[r][c].val) # cell is next to edge
-        return vals
+            rewards.append(-1)
+        return rewards, vals
 
 class Agent():
     def __init__(self,size):
@@ -90,21 +95,17 @@ class Agent():
         self.total_rewards = 0
         self.actions = ['n', 'e', 'w', 's']
 
-    def get_location(self):
-        return (self.row, self.col)
-
     def step(self, g):
-        #choose action
-        #act_index = rnd.randrange(0, 4)
+        # choose action
+        # act_index = rnd.randrange(0, 4)
         action = rnd.choice(self.actions)
         
-        #generate reward
+        # find next cell
         current_cell = g.grid[self.row][self.col]
-        reward, self.row, self.col = current_cell.get_next_cell(action)
+        self.row, self.col = current_cell.get_next_cell(action)
         
-        # state calculation
-        current_cell.update_state(reward, g)
-        self.total_rewards += reward # / count? do I need to track number of steps
+        # state value calculation
+        current_cell.update_state(g)
 
 class GridCell():
     def __init__(self, r, c, type):
@@ -114,31 +115,36 @@ class GridCell():
         self.cell_type = type # 0 - normal, 1 - A, 2 - B
         self.val = 0
     
-    # given the reward after an action is taken, and the values of all possible following states
-    # this function calculates the new value of a cell
-    def update_state(self, reward, g):
+    # calculate return
+    def value_function(self,reward,val):
+        return val * .9 + reward
+    
+    # this function calculates the new value of a cell using the average return from all possible next states
+    # uses .9 discount
+    def update_state(self, g):
         if self.cell_type == 1:
-            self.val = g.grid[4][1].val * .9 + reward # only one possible next state 
+            self.val = self.value_function(10,g.grid[4][1].val)
 
         elif self.cell_type == 2:
-            self.val = g.grid[2][3].val * .9 + reward # only one possible next state
+            self.val = self.value_function(5,g.grid[2][3].val)
 
 
         else:
             #average all possible next states
-            possible_next_states = g.next_states(self.row, self.col)
+            adj_rewards, adj_vals = g.next_states(self.row, self.col)
             avg = 0
-            for val in possible_next_states:
-                avg += (val * .9)
+            i = 0
+            while i < len(adj_vals):
+                avg += self.value_function(adj_rewards[i], adj_vals[i])
+                i+=1
 
-            avg = avg / len(possible_next_states)
+            avg = avg / len(adj_vals)
             #return avg value of neighbors + reward gained then apply discount
-            self.val = avg + reward
+            self.val = avg
          
-    #returns: reward, row, col
-    #this functions determines a reward for a step, as well as finding the coordinates for the next cell
+    #returns: row, col
+    #doing an unnecessary assignment here - fix later
     def get_next_cell(self, action):
-        reward = 0
         new_row = self.row
         new_col = self.col
 
@@ -151,50 +157,33 @@ class GridCell():
                     reward = 10
                     new_row = 4
                     new_col = 1
-                    return reward, new_row, new_col
+                    return new_row, new_col
 
                 case 3: # case B
                     reward = 5
                     new_row = 2
                     new_col = 3
-                    return reward, new_row, new_col
+                    return new_row, new_col
 
-        #if next location is out of bounds, location remains the same - reward -1
+        #if next location is out of bounds, location remains the same
         match action:
             case "n":
-                if self.row == 0:
-                    reward = -1
-                    #location remains unchanged
-                else:
-                    reward = 0
+                if self.row != 0:
                     new_row = self.row - 1
             case "e":
-                if self.col == 4:
-                    reward = -1
-                    #location remains unchanged
-                else:
-                    reward = 0
+                if self.col != 4:
                     new_col = self.col + 1
-                
             case "s":
-                if self.row == 4:
-                    reward = -1
-                    #location remains unchanged
-                else:
-                    reward = 0
+                if self.row != 4:
                     new_row = self.row + 1
             case "w":
-                if self.col == 0:
-                    reward = -1
-                    #location remains unchanged
-                else:
-                    reward = 0
+                if self.col != 0:
                     new_col = self.col - 1
         
-        return reward, new_row, new_col
+        return new_row, new_col
 
 if __name__ == '__main__':
-    n_steps = 100000
+    n_steps = 5000
 
     #g.grid generation
     grid = Grid(N)
@@ -210,12 +199,6 @@ if __name__ == '__main__':
     print("Results after " + str(n_steps))
     grid.print_vals(N)
     print("Total Rewards = " + str(agent.total_rewards))
-
-    #test value function
-    agent.row = 0
-    agent.col = 0
-    startcell  = grid.grid[3][0]
     
     print(grid.grid[0][0].val)
     print(grid.grid[0][1].val)
-    startcell.update_state(-1, grid)
